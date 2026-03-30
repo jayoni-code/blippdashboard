@@ -293,10 +293,10 @@ function sendCmd(cmd){
 
     if(mode === "cloud") {
         // Instead of blocking, we write the command to a "cmds" folder in Firebase
-        database.ref('/blipp_device/control').set({
-            command: cmd,
-            timestamp: Date.now()
-        });
+        database.ref('/blipp_device/control').update({
+    command: cmd,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
     } else if(mode === "wifi" && ws?.readyState === 1) {
         ws.send(cmd);
     } else if(mode === "ble" && btChar) {
