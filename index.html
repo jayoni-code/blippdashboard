@@ -201,7 +201,7 @@ function validate() {
 }
 
 function initApp() { 
-    setMode("cloud"); // Default to Cloud for best connectivity
+    setMode("cloud"); 
     startFirebaseSync(); 
     setTimeout(() => map.resize(), 300); 
 }
@@ -211,20 +211,16 @@ function startFirebaseSync() {
     statusRef.on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
-            updateStatus(true); // Connected to Firebase
+            updateStatus(true); 
             if (mode === "cloud") {
-                // Coordinate validation to prevent "jumping"
-                const lat = data.lat ?? lastLat;
-                const lng = data.lng ?? lastLng;
-                smoothMove(lat, lng);
-
-                const gs = document.getElementById('gpsStatus');
-                const statusStr = data.status || "Live";
-                gs.innerText = statusStr;
-                
-                // Color formatting based on GPS quality
-                gs.style.color = (statusStr === "GOOD" || statusStr === "LOCKED") ? "#00ff88" : "orange";
-                document.getElementById('sat').innerText = data.sat ?? "--";
+                // Update GPS Logic from Firebase
+                if(data.lat && data.lng) {
+                    smoothMove(data.lat, data.lng);
+                    document.getElementById('sat').innerText = data.sat ?? "Cloud";
+                    const gs = document.getElementById('gpsStatus');
+                    gs.innerText = data.gps_status ?? "Live";
+                    gs.style.color = (data.gps_status === "GOOD" || data.gps_status === "LOCKED") ? "#00ff88" : "#a855f7";
+                }
 
                 document.getElementById('battery').innerText = Math.round(data.battery) + "%";
                 document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
@@ -252,7 +248,7 @@ function setMode(m){
     disconnect(); 
     if(m === "wifi") connectWiFi();
     else if(m === "ble") connectBLE();
-    else updateStatus(true); // Cloud is passive
+    else updateStatus(true); 
 }
 
 document.getElementById('wifiBtn').onclick=()=>setMode("wifi");
@@ -275,7 +271,7 @@ async function connectBLE(){
         });
         const server = await btDevice.gatt.connect();
         const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-        const btChar = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+        btChar = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
         await btChar.startNotifications();
         btChar.addEventListener('characteristicvaluechanged', e => handleData(new TextDecoder().decode(e.target.value)));
         updateStatus(true);
@@ -283,11 +279,9 @@ async function connectBLE(){
 }
 
 function sendCmd(cmd){
-    // If not in cloud mode, check if we have a physical link (WiFi/BLE)
     if(!isConnected && mode !== "cloud") { showToast(); return; }
 
     if(mode === "cloud") {
-        // MATCHING ESP32: Set as raw string for simplified parsing
         database.ref('/blipp_device/control/command').set(cmd);
         console.log("☁️ Cloud Command Sent:", cmd);
     } else if(mode === "wifi" && ws?.readyState === 1) {
@@ -300,13 +294,24 @@ function sendCmd(cmd){
 function handleData(raw){
     if (mode === "cloud") return;
     let data; try{ data=JSON.parse(raw); }catch{ return; }
-    if(data.type==="gps"){
+    
+    // Core GPS Handling Logic
+    if(data.type==="gps" || (data.lat && data.lng)){
         smoothMove(data.lat, data.lng);
-        document.getElementById('sat').innerText = data.sat ?? "--";
+        document.getElementById('sat').innerText = data.sat ?? "0";
         const gs = document.getElementById('gpsStatus');
-        gs.innerText = data.status;
-        gs.style.color = (data.status === "LOCKED" || data.status === "GOOD") ? "#00ff88" : "orange";
+        gs.innerText = data.status || data.gps_status || "SEARCHING";
+        
+        // Dynamic color coding based on signal quality
+        if(data.status === "GOOD" || data.status === "LOCKED") {
+            gs.style.color = "#00ff88"; // Green
+        } else if (data.status === "WEAK") {
+            gs.style.color = "#ffcc00"; // Yellow
+        } else {
+            gs.style.color = "#ff4444"; // Red
+        }
     }
+    
     if(data.type==="status"){
         document.getElementById('battery').innerText = data.battery + "%";
         document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
