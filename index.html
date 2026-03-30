@@ -18,7 +18,6 @@
     --blue: #00d4ff;
     --danger: #ff4444;
     --glass: rgba(255, 255, 255, 0.06);
-    --glass-heavy: rgba(255, 255, 255, 0.12);
     --border: rgba(255, 255, 255, 0.1);
 }
 
@@ -26,9 +25,9 @@ body.mode-wifi { --accent: #00ff88; --accent-glow: rgba(0, 255, 136, 0.3); }
 body.mode-ble { --accent: #2dd4bf; --accent-glow: rgba(45, 212, 191, 0.3); }
 body.mode-cloud { --accent: #a855f7; --accent-glow: rgba(168, 85, 247, 0.3); }
 
-*{margin:0;padding:0;box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 
-body{
+body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
     color: white;
@@ -36,16 +35,7 @@ body{
     overflow-x: hidden;
 }
 
-/* --- Header & Logo --- */
-.logo-icon {
-    width: 32px; height: 32px;
-    background: var(--accent);
-    display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 8px; font-weight: 900; color: #0f172a;
-    margin-right: 10px; box-shadow: 0 0 15px var(--accent-glow);
-}
-
-.header{
+.header {
     position:fixed; top:0; width:100%;
     padding: 15px 25px;
     display:flex; justify-content:space-between; align-items:center;
@@ -55,9 +45,16 @@ body{
     z-index: 1000;
 }
 
+.logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 8px; font-weight: 900; color: #0f172a;
+    margin-right: 10px; box-shadow: 0 0 15px var(--accent-glow);
+}
+
 .title { font-weight:900; color: var(--accent); font-size: 1.3rem; display: flex; align-items: center; }
 
-/* --- Login Overlay --- */
 #loginOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(15, 23, 42, 0.8);
@@ -71,24 +68,13 @@ body{
     padding: 50px 40px; border-radius: 40px;
     border: 1px solid var(--border);
     text-align: center; width: 90%; max-width: 440px;
-    box-shadow: 0 40px 100px rgba(0,0,0,0.5);
-}
-
-.login-logo {
-    width: 60px; height: 60px;
-    background: var(--accent);
-    color: #0f172a;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; font-weight: 900;
-    border-radius: 15px; margin: 0 auto 30px;
 }
 
 .login-input {
     width: 100%; padding: 18px 25px; margin-bottom: 15px;
     border-radius: 18px; border: 1px solid var(--border);
     background: rgba(255, 255, 255, 0.9);
-    color: #0f172a; font-size: 1rem;
-    font-weight: 600; outline: none;
+    color: #0f172a; font-weight: 600; outline: none;
 }
 
 .login-btn {
@@ -97,20 +83,13 @@ body{
     font-size: 1.1rem; font-weight: 800; cursor: pointer;
 }
 
-/* --- Dashboard --- */
 .dashboard { padding: 100px 20px 40px; max-width: 1000px; margin: 0 auto; }
 .statusBox { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-.card {
-    background: var(--glass); border: 1px solid var(--border);
-    padding: 20px 10px; border-radius: 20px; text-align: center;
-}
+.card { background: var(--glass); border: 1px solid var(--border); padding: 20px 10px; border-radius: 20px; text-align: center; }
 .card b { display: block; margin-top: 8px; font-size: 1.3rem; color: var(--blue); }
 
 .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 25px; }
-.ctrl-btn {
-    padding: 18px; border: none; border-radius: 16px;
-    font-weight: 800; font-size: 0.85rem; cursor: pointer;
-}
+.ctrl-btn { padding: 18px; border: none; border-radius: 16px; font-weight: 800; cursor: pointer; }
 .btn { background: var(--accent); color: #0f172a; }
 .btnBlue { background: var(--blue); color: #0f172a; }
 .btnDanger { background: var(--danger); color: white; }
@@ -135,9 +114,9 @@ body{
 
 <div id="loginOverlay">
     <div class="login-card">
-        <div class="login-logo">B</div>
+        <div class="login-logo" style="width:60px; height:60px; background:var(--accent); color:#0f172a; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:900; border-radius:15px; margin:0 auto 30px;">B</div>
         <h2>BLiPP Dashboard</h2>
-        <p>Sign-in to access telemetry</p>
+        <p style="margin-bottom:20px; opacity:0.7;">Sign-in to access telemetry</p>
         <input type="email" id="userIn" class="login-input" placeholder="Email Address">
         <input type="password" id="passIn" class="login-input" placeholder="Password">
         <button class="login-btn" onclick="validate()">Unlock Dashboard</button>
@@ -184,7 +163,12 @@ body{
 // ================= FIREBASE CONFIG =================
 const firebaseConfig = {
     apiKey: "AIzaSyB72VvbasEBY7gPkdplHqUtSbvdFq5pFEs",
-    databaseURL: "https://blipp-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app"
+    authDomain: "blipp-dashboard.firebaseapp.com",
+    databaseURL: "https://blipp-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "blipp-dashboard",
+    storageBucket: "blipp-dashboard.firebasestorage.app",
+    messagingSenderId: "1070434356393",
+    appId: "1:1070434356393:web:20c7d1d90d64570e56edb8"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -192,7 +176,7 @@ const database = firebase.database();
 
 // ================= APP STATE =================
 let isConnected = false;
-let ws=null, btDevice=null, btChar=null, mode="wifi", devicePowered=true;
+let ws=null, btDevice=null, btChar=null, mode="wifi";
 let lastLat = 14.5995, lastLng = 120.9842;
 
 // ================= MAPBOX INIT =================
@@ -217,7 +201,7 @@ function validate() {
 }
 
 function initApp() { 
-    connect(); 
+    setMode("cloud"); // Default to Cloud for best connectivity
     startFirebaseSync(); 
     setTimeout(() => map.resize(), 300); 
 }
@@ -226,20 +210,19 @@ function startFirebaseSync() {
     const statusRef = database.ref('/blipp_device/latest');
     statusRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data && mode === "cloud") {
-            // Update GPS and Map
-            smoothMove(data.lat, data.lng);
-            document.getElementById('sat').innerText = "Cloud";
-            document.getElementById('gpsStatus').innerText = "Live";
-            document.getElementById('gpsStatus').style.color = "#00ff88";
+        if (data) {
+            updateStatus(true); // Connected to Firebase
+            if (mode === "cloud") {
+                smoothMove(data.lat, data.lng);
+                document.getElementById('sat').innerText = "Cloud";
+                document.getElementById('gpsStatus').innerText = "Live";
+                document.getElementById('gpsStatus').style.color = "#00ff88";
 
-            // Update Status Cards
-            document.getElementById('battery').innerText = Math.round(data.battery) + "%";
-            document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
-            document.getElementById('power').innerText = data.powered ? "ON" : "OFF";
-            document.getElementById('led').innerText = data.led ? "ON" : "OFF";
-            
-            updateStatus(true);
+                document.getElementById('battery').innerText = Math.round(data.battery) + "%";
+                document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
+                document.getElementById('power').innerText = data.powered ? "ON" : "OFF";
+                document.getElementById('led').innerText = data.led ? "ON" : "OFF";
+            }
         }
     });
 }
@@ -252,13 +235,15 @@ function smoothMove(lat, lng) {
 
 function setMode(m){
     if(mode === m) return;
-    mode=m;
+    mode = m;
     document.body.className = `mode-${m}`;
     document.querySelectorAll('.mode button').forEach(b => b.classList.remove('active'));
     document.getElementById(m + 'Btn').classList.add('active');
+    
     disconnect(); 
-    if(m !== "cloud") connect();
-    else updateStatus(false); // Cloud mode relies on Firebase listener
+    if(m === "wifi") connectWiFi();
+    else if(m === "ble") connectBLE();
+    else updateStatus(true); // Cloud is passive
 }
 
 document.getElementById('wifiBtn').onclick=()=>setMode("wifi");
@@ -292,11 +277,10 @@ function sendCmd(cmd){
     if(!isConnected && mode !== "cloud") { showToast(); return; }
 
     if(mode === "cloud") {
-        // Instead of blocking, we write the command to a "cmds" folder in Firebase
         database.ref('/blipp_device/control').update({
-    command: cmd,
-    timestamp: firebase.database.ServerValue.TIMESTAMP
-    });
+            command: cmd,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
     } else if(mode === "wifi" && ws?.readyState === 1) {
         ws.send(cmd);
     } else if(mode === "ble" && btChar) {
@@ -305,7 +289,7 @@ function sendCmd(cmd){
 }
 
 function handleData(raw){
-    if (mode === "cloud") return; // Ignore local signals if in Cloud mode
+    if (mode === "cloud") return;
     let data; try{ data=JSON.parse(raw); }catch{ return; }
     if(data.type==="gps"){
         smoothMove(data.lat, data.lng);
@@ -319,7 +303,6 @@ function handleData(raw){
         document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
         document.getElementById('power').innerText = data.powered ? "ON" : "OFF";
         document.getElementById('led').innerText = data.led ? "ON" : "OFF";
-        devicePowered = data.powered;
     }
 }
 
@@ -332,9 +315,10 @@ function updateStatus(state){
 }
 
 function disconnect(){
-    isConnected = false; updateStatus(false);
     if(ws) ws.close();
     if(btDevice?.gatt?.connected) btDevice.gatt.disconnect();
+    isConnected = false;
+    updateStatus(false);
 }
 
 function showToast() {
