@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🔗 BLiPP WROOM Dashboard</title>
+
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<style>
+:root {
+    --accent: #00ff88;
+    --accent-glow: rgba(0, 255, 136, 0.3);
+    --blue: #00d4ff;
+    --danger: #ff4444;
+    --glass: rgba(255, 255, 255, 0.06);
+    --glass-heavy: rgba(255, 255, 255, 0.12);
+    --border: rgba(255, 255, 255, 0.1);
+}
+
+body.mode-wifi { --accent: #00ff88; --accent-glow: rgba(0, 255, 136, 0.3); }
+body.mode-ble { --accent: #2dd4bf; --accent-glow: rgba(45, 212, 191, 0.3); }
+body.mode-cloud { --accent: #a855f7; --accent-glow: rgba(168, 85, 247, 0.3); }
+
+*{margin:0;padding:0;box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+
+body{
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+    color: white;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* --- Header & Logo --- */
+.logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 8px; font-weight: 900; color: #0f172a;
+    margin-right: 10px; box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.header{
+    position:fixed; top:0; width:100%;
+    padding: 15px 25px;
+    display:flex; justify-content:space-between; align-items:center;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid var(--border);
+    z-index: 1000;
+}
+
+.title { font-weight:900; color: var(--accent); font-size: 1.3rem; display: flex; align-items: center; }
+
+/* --- Login Overlay --- */
+#loginOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(30px);
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 50px 40px; border-radius: 40px;
+    border: 1px solid var(--border);
+    text-align: center; width: 90%; max-width: 440px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+}
+
+.login-logo {
+    width: 60px; height: 60px;
+    background: var(--accent);
+    color: #0f172a;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 900;
+    border-radius: 15px; margin: 0 auto 30px;
+}
+
+.login-input {
+    width: 100%; padding: 18px 25px; margin-bottom: 15px;
+    border-radius: 18px; border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.9);
+    color: #0f172a; font-size: 1rem;
+    font-weight: 600; outline: none;
+}
+
+.login-btn {
+    width: 100%; padding: 20px; border-radius: 20px;
+    border: none; background: var(--accent); color: #0f172a;
+    font-size: 1.1rem; font-weight: 800; cursor: pointer;
+}
+
+/* --- Dashboard --- */
+.dashboard { padding: 100px 20px 40px; max-width: 1000px; margin: 0 auto; }
+.statusBox { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.card {
+    background: var(--glass); border: 1px solid var(--border);
+    padding: 20px 10px; border-radius: 20px; text-align: center;
+}
+.card b { display: block; margin-top: 8px; font-size: 1.3rem; color: var(--blue); }
+
+.controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 25px; }
+.ctrl-btn {
+    padding: 18px; border: none; border-radius: 16px;
+    font-weight: 800; font-size: 0.85rem; cursor: pointer;
+}
+.btn { background: var(--accent); color: #0f172a; }
+.btnBlue { background: var(--blue); color: #0f172a; }
+.btnDanger { background: var(--danger); color: white; }
+
+#map { height: 400px; width: 100%; margin-top: 25px; border-radius: 24px; border: 1px solid var(--border); }
+.marker { width: 22px; height: 22px; background-color: var(--accent); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 20px var(--accent); }
+
+#toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: rgba(255, 68, 68, 0.9); padding: 14px 28px; border-radius: 50px; font-weight: 700; z-index: 3000; display: none; }
+.mode button { padding: 8px 16px; border:none; border-radius:12px; background: #1e293b; color: #94a3b8; font-size: 0.75rem; font-weight: 600; cursor:pointer; }
+.mode .active { background: var(--accent); color: #0f172a; }
+.status { font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.dot { width:12px; height:12px; border-radius:50%; background: var(--danger); }
+.dot.connected { background: var(--accent); }
+
+@media (max-width: 600px) { .statusBox, .controls { grid-template-columns: repeat(2, 1fr); } #map { height: 320px; } }
+</style>
+</head>
+
+<body class="mode-wifi">
+
+<div id="toast">⚠️ PLEASE CONNECT DEVICE FIRST</div>
+
+<div id="loginOverlay">
+    <div class="login-card">
+        <div class="login-logo">B</div>
+        <h2>BLiPP Dashboard</h2>
+        <p>Sign-in to access telemetry</p>
+        <input type="email" id="userIn" class="login-input" placeholder="Email Address">
+        <input type="password" id="passIn" class="login-input" placeholder="Password">
+        <button class="login-btn" onclick="validate()">Unlock Dashboard</button>
+        <p id="err" style="color:var(--danger); margin-top:15px; display:none;">Invalid Credentials</p>
+    </div>
+</div>
+
+<div class="header">
+  <div class="title"><div class="logo-icon">B</div> BLiPP</div>
+  <div class="mode">
+    <button id="wifiBtn" class="active">WiFi</button>
+    <button id="bleBtn">BLE</button>
+    <button id="cloudBtn">Cloud</button>
+  </div>
+  <div class="status">
+    <div id="dot" class="dot"></div>
+    <span id="conn">OFFLINE</span>
+  </div>
+</div>
+
+<div class="dashboard">
+    <div class="statusBox">
+      <div class="card">🔋 Battery<b id="battery">--%</b></div>
+      <div class="card">🚨 Alert<b id="alert">--</b></div>
+      <div class="card">⚡ Power<b id="power">--</b></div>
+      <div class="card">💡 LED<b id="led">--</b></div>
+      <div class="card">🛰️ GPS<b id="gpsStatus">--</b></div>
+      <div class="card">📡 Sat<b id="sat">0</b></div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl-btn btn" id="btnBEEP" onclick="sendCmd('BEEP')">BEEP</button>
+      <button class="ctrl-btn btnBlue" id="btnSTATUS" onclick="sendCmd('STATUS')">STATUS</button>
+      <button class="ctrl-btn btn" id="btnALERT" onclick="sendCmd('TOGGLE_ALERT')">ALERT</button>
+      <button class="ctrl-btn btn" id="btnLED" onclick="sendCmd('TOGGLE_LED')">LED</button>
+      <button class="ctrl-btn btn" id="btnON" onclick="sendCmd('POWER_ON')">ON</button>
+      <button class="ctrl-btn btnDanger" id="btnOFF" onclick="sendCmd('POWER_OFF')">OFF</button>
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<script>
+// ================= FIREBASE CONFIG =================
+const firebaseConfig = {
+    apiKey: "AIzaSyB72VvbasEBY7gPkdplHqUtSbvdFq5pFEs",
+    databaseURL: "https://blipp-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// ================= APP STATE =================
+let isConnected = false;
+let ws=null, btDevice=null, btChar=null, mode="wifi", devicePowered=true;
+let lastLat = 14.5995, lastLng = 120.9842;
+
+// ================= MAPBOX INIT =================
+mapboxgl.accessToken = 'pk.eyJ1IjoiYW5kcmVpcmVpIiwiYSI6ImNtbjhpbmpocjBiMDcydnB3czZpZjVkZHAifQ.GNQE1HYl2fx49aRUEegSAw';
+let map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/outdoors-v12',
+    center: [lastLng, lastLat],
+    zoom: 14, pitch: 45
+});
+const el = document.createElement('div'); el.className = 'marker';
+let marker = new mapboxgl.Marker(el).setLngLat([lastLng, lastLat]).addTo(map);
+
+// ================= CORE FUNCTIONS =================
+function validate() {
+    const u = document.getElementById('userIn').value;
+    const p = document.getElementById('passIn').value;
+    if(u === "blippdashboard@gmail.com" && p === "blipp1234") {
+        document.getElementById('loginOverlay').style.display = "none";
+        initApp();
+    } else { document.getElementById('err').style.display = "block"; }
+}
+
+function initApp() { 
+    connect(); 
+    startFirebaseSync(); 
+    setTimeout(() => map.resize(), 300); 
+}
+
+function startFirebaseSync() {
+    const statusRef = database.ref('/blipp_device/latest');
+    statusRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && mode === "cloud") {
+            // Update GPS and Map
+            smoothMove(data.lat, data.lng);
+            document.getElementById('sat').innerText = "Cloud";
+            document.getElementById('gpsStatus').innerText = "Live";
+            document.getElementById('gpsStatus').style.color = "#00ff88";
+
+            // Update Status Cards
+            document.getElementById('battery').innerText = Math.round(data.battery) + "%";
+            document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
+            document.getElementById('power').innerText = data.powered ? "ON" : "OFF";
+            document.getElementById('led').innerText = data.led ? "ON" : "OFF";
+            
+            updateStatus(true);
+        }
+    });
+}
+
+function smoothMove(lat, lng) {
+    marker.setLngLat([lng, lat]);
+    map.flyTo({ center: [lng, lat], speed: 0.8 });
+    lastLat = lat; lastLng = lng;
+}
+
+function setMode(m){
+    if(mode === m) return;
+    mode=m;
+    document.body.className = `mode-${m}`;
+    document.querySelectorAll('.mode button').forEach(b => b.classList.remove('active'));
+    document.getElementById(m + 'Btn').classList.add('active');
+    disconnect(); 
+    if(m !== "cloud") connect();
+    else updateStatus(false); // Cloud mode relies on Firebase listener
+}
+
+document.getElementById('wifiBtn').onclick=()=>setMode("wifi");
+document.getElementById('bleBtn').onclick=()=>setMode("ble");
+document.getElementById('cloudBtn').onclick=()=>setMode("cloud");
+
+function connectWiFi(){
+    updateStatus("connecting");
+    ws = new WebSocket("ws://192.168.4.1:81");
+    ws.onopen = () => updateStatus(true);
+    ws.onmessage = (msg) => handleData(msg.data);
+    ws.onclose = () => { if(mode==="wifi") setTimeout(connectWiFi, 5000); };
+}
+
+async function connectBLE(){
+    updateStatus("connecting");
+    try {
+        btDevice = await navigator.bluetooth.requestDevice({
+            filters:[{services:['0000ffe0-0000-1000-8000-00805f9b34fb']}]
+        });
+        const server = await btDevice.gatt.connect();
+        const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+        btChar = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+        await btChar.startNotifications();
+        btChar.addEventListener('characteristicvaluechanged', e => handleData(new TextDecoder().decode(e.target.value)));
+        updateStatus(true);
+    } catch(e) { updateStatus(false); }
+}
+
+function sendCmd(cmd){
+    if(mode === "cloud") { alert("Cloud Mode is read-only. Connect via WiFi or BLE to control device hardware."); return; }
+    if(!isConnected) { showToast(); return; }
+    if(mode==="wifi" && ws?.readyState===1) ws.send(cmd);
+    if(mode==="ble" && btChar) btChar.writeValue(new TextEncoder().encode(cmd));
+}
+
+function handleData(raw){
+    if (mode === "cloud") return; // Ignore local signals if in Cloud mode
+    let data; try{ data=JSON.parse(raw); }catch{ return; }
+    if(data.type==="gps"){
+        smoothMove(data.lat, data.lng);
+        document.getElementById('sat').innerText = data.sat ?? "--";
+        const gs = document.getElementById('gpsStatus');
+        gs.innerText = data.status;
+        gs.style.color = (data.status === "LOCKED" || data.status === "GOOD") ? "#00ff88" : "orange";
+    }
+    if(data.type==="status"){
+        document.getElementById('battery').innerText = data.battery + "%";
+        document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
+        document.getElementById('power').innerText = data.powered ? "ON" : "OFF";
+        document.getElementById('led').innerText = data.led ? "ON" : "OFF";
+        devicePowered = data.powered;
+    }
+}
+
+function updateStatus(state){
+    const c = document.getElementById('conn'), d = document.getElementById('dot');
+    if(state === "connecting") { c.innerText = "LINKING..."; return; }
+    isConnected = !!state;
+    c.innerText = isConnected ? "CONNECTED" : "OFFLINE";
+    d.classList.toggle("connected", isConnected);
+}
+
+function disconnect(){
+    isConnected = false; updateStatus(false);
+    if(ws) ws.close();
+    if(btDevice?.gatt?.connected) btDevice.gatt.disconnect();
+}
+
+function showToast() {
+    const t = document.getElementById('toast');
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+setInterval(() => { if(isConnected && mode !== "cloud") sendCmd("STATUS"); }, 4000);
+</script>
+</body>
+</html>
