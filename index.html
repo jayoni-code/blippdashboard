@@ -289,10 +289,19 @@ async function connectBLE(){
 }
 
 function sendCmd(cmd){
-    if(mode === "cloud") { alert("Cloud Mode is read-only. Connect via WiFi or BLE to control device hardware."); return; }
-    if(!isConnected) { showToast(); return; }
-    if(mode==="wifi" && ws?.readyState===1) ws.send(cmd);
-    if(mode==="ble" && btChar) btChar.writeValue(new TextEncoder().encode(cmd));
+    if(!isConnected && mode !== "cloud") { showToast(); return; }
+
+    if(mode === "cloud") {
+        // Instead of blocking, we write the command to a "cmds" folder in Firebase
+        database.ref('/blipp_device/control').set({
+            command: cmd,
+            timestamp: Date.now()
+        });
+    } else if(mode === "wifi" && ws?.readyState === 1) {
+        ws.send(cmd);
+    } else if(mode === "ble" && btChar) {
+        btChar.writeValue(new TextEncoder().encode(cmd));
+    }
 }
 
 function handleData(raw){
