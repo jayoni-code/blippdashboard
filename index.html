@@ -273,14 +273,14 @@ async function connectBLE(){
     } catch(e) { updateStatus(false); }
 }
 
+// Replace your existing sendCmd function with this:
 function sendCmd(cmd){
     if(!isConnected && mode !== "cloud") { showToast(); return; }
 
     if(mode === "cloud") {
-        database.ref('/blipp_device/control').update({
-            command: cmd,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
+        // Direct set prevents extra JSON overhead for the ESP32
+        database.ref('/blipp_device/control/command').set(cmd);
+        console.log("☁️ Cloud Command Sent:", cmd);
     } else if(mode === "wifi" && ws?.readyState === 1) {
         ws.send(cmd);
     } else if(mode === "ble" && btChar) {
