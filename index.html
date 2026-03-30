@@ -213,10 +213,18 @@ function startFirebaseSync() {
         if (data) {
             updateStatus(true); // Connected to Firebase
             if (mode === "cloud") {
-                smoothMove(data.lat, data.lng);
-                document.getElementById('sat').innerText = "Cloud";
-                document.getElementById('gpsStatus').innerText = "Live";
-                document.getElementById('gpsStatus').style.color = "#00ff88";
+                // Coordinate validation to prevent "jumping"
+                const lat = data.lat ?? lastLat;
+                const lng = data.lng ?? lastLng;
+                smoothMove(lat, lng);
+
+                const gs = document.getElementById('gpsStatus');
+                const statusStr = data.status || "Live";
+                gs.innerText = statusStr;
+                
+                // Color formatting based on GPS quality
+                gs.style.color = (statusStr === "GOOD" || statusStr === "LOCKED") ? "#00ff88" : "orange";
+                document.getElementById('sat').innerText = data.sat ?? "--";
 
                 document.getElementById('battery').innerText = Math.round(data.battery) + "%";
                 document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
@@ -228,6 +236,7 @@ function startFirebaseSync() {
 }
 
 function smoothMove(lat, lng) {
+    if(!lat || !lng) return;
     marker.setLngLat([lng, lat]);
     map.flyTo({ center: [lng, lat], speed: 0.8 });
     lastLat = lat; lastLng = lng;
@@ -266,19 +275,19 @@ async function connectBLE(){
         });
         const server = await btDevice.gatt.connect();
         const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-        btChar = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+        const btChar = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
         await btChar.startNotifications();
         btChar.addEventListener('characteristicvaluechanged', e => handleData(new TextDecoder().decode(e.target.value)));
         updateStatus(true);
     } catch(e) { updateStatus(false); }
 }
 
-// Replace your existing sendCmd function with this:
 function sendCmd(cmd){
+    // If not in cloud mode, check if we have a physical link (WiFi/BLE)
     if(!isConnected && mode !== "cloud") { showToast(); return; }
 
     if(mode === "cloud") {
-        // Direct set prevents extra JSON overhead for the ESP32
+        // MATCHING ESP32: Set as raw string for simplified parsing
         database.ref('/blipp_device/control/command').set(cmd);
         console.log("☁️ Cloud Command Sent:", cmd);
     } else if(mode === "wifi" && ws?.readyState === 1) {
