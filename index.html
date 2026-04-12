@@ -98,17 +98,65 @@ body {
 
 .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 25px; }
 
-.ctrl-btn { padding: 18px; border: none; border-radius: 16px; font-weight: 800; cursor: pointer; }
+.ctrl-btn {
+    padding: 18px;
+    border: none;
+    border-radius: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.08s ease, filter 0.2s ease;
+}
+
+.ctrl-btn.pressed {
+    transform: scale(0.96);
+}
 
 .btn { background: var(--accent); color: #0f172a; }
-
 .btnBlue { background: var(--blue); color: #0f172a; }
-
 .btnDanger { background: var(--danger); color: white; }
 
 #map { height: 400px; width: 100%; margin-top: 25px; border-radius: 24px; border: 1px solid var(--border); }
 
-.marker { width: 22px; height: 22px; background-color: var(--accent); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 20px var(--accent); }
+.marker {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    background: var(--accent);
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* pulse ring */
+.marker::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.6;
+    z-index: -1;
+    animation: pulseRing 1.6s infinite;
+}
+
+@keyframes pulseRing {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.6;
+    }
+    70% {
+        transform: translate(-50%, -50%) scale(3.2);
+        opacity: 0;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
 
 #toast {
     position: fixed; bottom: 40px; left: 50%;
@@ -154,6 +202,96 @@ body {
 @media (max-width: 600px) {
     .statusBox, .controls { grid-template-columns: repeat(2, 1fr); }
     #map { height: 320px; }
+}
+
+/* ===============================
+   SAFE UI ENHANCEMENT PACK
+   (ADD ONLY - NO BREAKING CHANGES)
+================================= */
+
+/* GLOBAL SMOOTHNESS (safe override layer only) */
+button, .ctrl-btn, .mode button, .card {
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+/* ================= BUTTON HOVER ================= */
+.ctrl-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    filter: brightness(1.15);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+}
+
+.ctrl-btn:active {
+    transform: scale(0.95);
+}
+
+/* ================= MODE BUTTONS ================= */
+.mode button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+}
+
+.mode .active {
+    box-shadow: 0 0 18px var(--accent-glow);
+}
+
+/* ================= CARD EFFECTS ================= */
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.25);
+}
+
+/* ================= LOGIN ANIMATION ================= */
+.login-card {
+    animation: blippFadeIn 0.35s ease;
+}
+
+@keyframes blippFadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ================= MAP FADE ================= */
+#map {
+    animation: blippMapIn 0.5s ease;
+}
+
+@keyframes blippMapIn {
+    from { opacity: 0.7; }
+    to { opacity: 1; }
+}
+
+/* ================= CLICK RIPPLE EFFECT ================= */
+.ctrl-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.ctrl-btn::after {
+    content: "";
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.4s ease, opacity 0.6s ease;
+    top: 50%;
+    left: 50%;
+    transform-origin: center;
+}
+
+.ctrl-btn:active::after {
+    transform: scale(2.5);
+    opacity: 0;
+    transition: 0s;
+}
+
+/* ================= EXTRA POLISH ================= */
+.header, .dashboard {
+    transition: all 0.3s ease;
 }
 </style>
 </head>
@@ -230,6 +368,7 @@ let isConnected = false;
 let ws=null, mode="wifi";
 let lastLat = 14.5995, lastLng = 120.9842;
 
+let gpsTimeout;
 // ================= MAP =================
 mapboxgl.accessToken = 'pk.eyJ1IjoiYW5kcmVpcmVpIiwiYSI6ImNtbjhpbmpocjBiMDcydnB3czZpZjVkZHAifQ.GNQE1HYl2fx49aRUEegSAw';
 
@@ -240,9 +379,27 @@ let map = new mapboxgl.Map({
     zoom:14
 });
 
-let marker = new mapboxgl.Marker(
-    document.createElement('div')
-).setLngLat([lastLng,lastLat]).addTo(map);
+let marker; // only declare
+
+map.on('idle', () => {
+    if (marker) return; // prevent duplicate creation
+
+    const el = document.createElement('div');
+    el.className = 'marker';
+
+    marker = new mapboxgl.Marker(el, { anchor: 'center' })
+    .setLngLat([lastLng, lastLat])
+    .addTo(map);
+});
+
+// ================= BUTTON ANIMATION =================
+document.querySelectorAll('.ctrl-btn').forEach(btn=>{
+    btn.addEventListener('mousedown', ()=>btn.classList.add('pressed'));
+    btn.addEventListener('mouseup', ()=>btn.classList.remove('pressed'));
+    btn.addEventListener('mouseleave', ()=>btn.classList.remove('pressed'));
+    btn.addEventListener('touchstart', ()=>btn.classList.add('pressed'));
+    btn.addEventListener('touchend', ()=>btn.classList.remove('pressed'));
+});
 
 // ================= LOGIN =================
 function validate(){
@@ -260,28 +417,43 @@ function validate(){
 function initApp(){
     setMode("cloud");
     startFirebaseSync();
+
+    setTimeout(() => {
+        map.resize(); // forces correct Mapbox layout recalculation
+    }, 300);
 }
 
 // ================= FIREBASE SYNC =================
-function startFirebaseSync(){
-    database.ref('/blipp_device/latest').on('value',snap=>{
-        const data=snap.val();
-        if(!data) return;
+function startFirebaseSync() {
+    const statusRef = database.ref('/blipp_device/latest');
+    statusRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            updateStatus(true); 
+            if (mode === "cloud") {
+                // Update GPS Logic from Firebase
+                if(data.lat != null && data.lng != null){
+                    smoothMove(data.lat, data.lng);
+                    document.getElementById('sat').innerText = data.sat ?? "Cloud";
+                    const gs = document.getElementById('gpsStatus');
+                    gs.innerText = data.gps_status ?? "Live";
+                    gs.style.color = (data.gps_status === "GOOD" || data.gps_status === "LOCKED") ? "#00ff88" : "#a855f7";
+                }
 
-        updateStatus(true);
-
-        if(mode==="cloud"){
-            if(data.lat && data.lng){
-                marker.setLngLat([data.lng,data.lat]);
-                map.flyTo({center:[data.lng,data.lat], speed:0.8});
+                document.getElementById('battery').innerText = Math.round(data.battery) + "%";
+                document.getElementById('alert').innerText = data.alert ? "ON" : "OFF";
+                document.getElementById('power').innerText = data.powered ? "ON" : "OFF";
+                document.getElementById('led').innerText = data.led ? "ON" : "OFF";
             }
-
-            document.getElementById('battery').innerText=Math.round(data.battery)+"%";
-            document.getElementById('alert').innerText=data.alert?"ON":"OFF";
-            document.getElementById('power').innerText=data.powered?"ON":"OFF";
-            document.getElementById('led').innerText=data.led?"ON":"OFF";
         }
     });
+}
+
+function smoothMove(lat, lng) {
+    if(!lat || !lng) return;
+    marker.setLngLat([lng, lat]);
+    map.flyTo({ center: [lng, lat], speed: 0.8 });
+    lastLat = lat; lastLng = lng;
 }
 
 // ================= MODE =================
@@ -317,23 +489,83 @@ function connectWiFi(){
 function sendCmd(cmd){
     if(!isConnected && mode!=="cloud"){ showToast(); return; }
 
-    // ALERT UI FEEDBACK
+    // ALERT UI FEEDBACK + CONTINUOUS BEEP
     if(cmd==="TOGGLE_ALERT"){
         const a=document.getElementById('alert');
         const btn=document.getElementById('btnALERT');
-
         const isOn=a.innerText==="ON";
-        a.innerText=isOn?"OFF":"ON";
 
+        a.innerText=isOn?"OFF":"ON";
         btn.style.background=isOn?"var(--accent)":"var(--danger)";
+
+        // START / STOP CONTINUOUS BEEP
+        // START / STOP CONTINUOUS BEEP
+if(!isOn){
+
+    // ✅ FIX: prevent duplicate intervals
+    if(window.beepInterval){
+        clearInterval(window.beepInterval);
+    }
+
+    window.beepInterval = setInterval(()=>{
+        if(mode==="cloud"){
+            database.ref('/blipp_device/control/command').set("BEEP");
+        } else if(ws?.readyState===1){
+            ws.send("BEEP");
+        }
+    }, 800);
+
+} else {
+    clearInterval(window.beepInterval);
+    window.beepInterval = null; // ✅ reset properly
+}
+    }
+
+    // LED TOGGLE FIX
+    if(cmd==="TOGGLE_LED"){
+        const l=document.getElementById('led');
+        const btn=document.getElementById('btnLED');
+        const isOn=l.innerText==="ON";
+        l.innerText=isOn?"OFF":"ON";
+        btn.style.background=isOn?"var(--accent)":"var(--blue)";
+    }
+
+    // POWER TOGGLE FIX
+    if(cmd==="POWER_ON" || cmd==="POWER_OFF"){
+        const p=document.getElementById('power');
+        const isOn = cmd==="POWER_ON";
+        p.innerText = isOn ? "ON" : "OFF";
+        document.getElementById('btnON').style.opacity = isOn ? "1" : "0.6";
+        document.getElementById('btnOFF').style.opacity = isOn ? "0.6" : "1";
     }
 
     // STATUS UI FEEDBACK
     if(cmd==="STATUS"){
-        const btn=document.getElementById('btnSTATUS');
-        btn.innerText="LOADING...";
-        setTimeout(()=>btn.innerText="STATUS",800);
-    }
+    const btn=document.getElementById('btnSTATUS');
+    const conn=document.getElementById('conn');
+
+    btn.innerText="CHECKING...";
+    btn.style.opacity="0.7";
+
+    // simulate status scan delay
+    setTimeout(()=>{
+        // show connection result
+        if(isConnected || mode==="cloud"){
+            conn.innerText="CONNECTED";
+        } else {
+            conn.innerText="OFFLINE";
+        }
+
+        btn.innerText="UPDATED";
+        
+        // revert back
+        setTimeout(()=>{
+            btn.innerText="STATUS";
+            btn.style.opacity="1";
+        }, 800);
+
+    }, 700);
+}
 
     if(mode==="cloud"){
         database.ref('/blipp_device/control/command').set(cmd);
@@ -341,16 +573,47 @@ function sendCmd(cmd){
         ws.send(cmd);
     }
 }
-
 // ================= DATA =================
 function handleData(raw){
-    let data;
-    try{data=JSON.parse(raw);}catch{return;}
+    if (mode === "cloud") return;
+    let data; try{ data=JSON.parse(raw); }catch{ return; }
+    
+    // Core GPS Handling Logic
+   if (data.type === "gps" || (data.lat != null && data.lng != null)) {
 
-    if(data.lat && data.lng){
-        marker.setLngLat([data.lng,data.lat]);
-        map.flyTo({center:[data.lng,data.lat], speed:0.8});
+    // clear old timer every new GPS update
+    clearTimeout(gpsTimeout);
+
+    smoothMove(data.lat, data.lng);
+
+    document.getElementById('sat').innerText = data.sat ?? "0";
+
+    const gs = document.getElementById('gpsStatus');
+
+    // ✅ define status FIRST
+    const status = data.status || data.gps_status || "LOCKED";
+
+    // update text immediately
+    gs.innerText = status;
+
+    // update color immediately
+    if (status === "GOOD" || status === "LOCKED") {
+        gs.style.color = "#00ff88";
+    } 
+    else if (status === "WEAK") {
+        gs.style.color = "#ffcc00";
+    } 
+    else {
+        gs.style.color = "#ff4444";
     }
+
+    // watchdog timeout (device stop detection)
+    gpsTimeout = setTimeout(() => {
+        gs.innerText = "SEARCHING";
+        gs.style.color = "#ff4444";
+    }, 5000);
+}
+    
 
     if(data.battery!==undefined){
         document.getElementById('battery').innerText=data.battery+"%";
